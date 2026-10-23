@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Nexora</title>
+<style>
+:root{--bg:#0b1020;--card:#151b34;--p:#7c5cff;--a:#00e0c6;--t:#eef1ff;--m:#8a93b8}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+body{margin:0;background:radial-gradient(circle at 20% 0,#1d1650,var(--bg) 60%) fixed;color:var(--t);font-family:system-ui,sans-serif;min-height:100vh;padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom)}
+h1{margin:0;font-size:26px;letter-spacing:4px;background:linear-gradient(90deg,var(--p),var(--a));-webkit-background-clip:text;color:transparent}
+h2{margin:0;font-size:20px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 0 8px}
+.top small{color:var(--m)}
+.coin{background:var(--card);padding:8px 14px;border-radius:20px;font-weight:700}
+.bar{height:8px;background:#232a4d;border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--p),var(--a))}
+.row{display:flex;gap:10px;margin:14px 0}
+.btn{flex:1;border:0;border-radius:14px;padding:13px;color:#fff;font-weight:700;font-size:15px;background:var(--p)}
+.btn.alt{background:var(--card);flex:0 0 auto}
+.nb{display:block;margin:16px auto;max-width:340px;width:100%}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-bottom:20px}
+.card{background:var(--card);border-radius:20px;padding:16px;border:1px solid #ffffff12}
+.card:active{transform:scale(.97)}
+.card b{font-size:38px}.card h3{margin:8px 0 2px}
+.card p{margin:0 0 8px;color:var(--m);font-size:12px}
+.card small{color:var(--a)}
+.dim{opacity:.5}
+.info{text-align:center;margin:10px 0;color:var(--m);font-weight:600}
+.b3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:340px;margin:auto}
+.cell{aspect-ratio:1;background:var(--card);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:800}
+.cell.X{color:var(--a)}.cell.O{color:#ff4d6d}
+.b4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:360px;margin:auto;background:#10162e;padding:8px;border-radius:16px;touch-action:none}
+.t{aspect-ratio:1;border-radius:10px;background:#1b2245;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px}
+canvas{display:block;margin:auto;border-radius:16px;touch-action:none}
+.tap{display:block;margin:20px auto;width:190px;height:190px;border-radius:50%;border:0;font-size:80px;background:radial-gradient(#3b2d9c,#1b1550);box-shadow:0 0 40px #7c5cff88}
+.tap:active{transform:scale(.94)}
+.up{width:100%;display:flex;justify-content:space-between;align-items:center;background:var(--card);color:var(--t);border:0;border-radius:14px;padding:14px;margin-bottom:8px;font-size:15px;text-align:left}
+.up:disabled{opacity:.45}.up small{display:block;color:var(--m)}
+.toast{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%);background:var(--a);color:#032;padding:10px 16px;border-radius:20px;font-weight:700;z-index:9;white-space:nowrap}
+.modal{position:fixed;inset:0;background:#000a;display:flex;align-items:flex-end;z-index:5}
+.sheet{background:#10162e;width:100%;padding:20px;border-radius:24px 24px 0 0}
+</style></head>
+<body><div id="app"></div>
+<script>
+const $=s=>document.querySelector(s),rand=n=>Math.random()*n|0;
+const div=c=>{const d=document.createElement('div');d.className=c;return d};
+const K='nexora1';
+let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
+S=S||{xp:0,coins:0,best:{},up:{xp:0,coin:0},daily:0,streak:0,emp:{c:0,at:0,u:[0,0,0]}};
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const lvl=()=>Math.floor(Math.sqrt(S.xp/40))+1;
+const best=(id,v)=>{if(v>(S.best[id]||0)){S.best[id]=v;save()}};
+function toast(m){const t=div('toast');t.textContent=m;document.body.append(t);setTimeout(()=>t.remove(),2400)}
+function reward(xp,co){xp=Math.round(xp*(1+.1*S.up.xp));co=Math.round(co*(1+.1*S.up.coin));const l=lvl();S.xp+=xp;S.coins+=co;save();toast(`+${xp} XP  +${co} 🪙`+(lvl()>l?`  ·  Level ${lvl()}!`:''))}
+function swipe(n,f){let t;n.addEventListener('touchstart',e=>t=e.touches[0],{passive:true});n.addEventListener('touchend',e=>{const q=e.changedTouches[0],x=q.clientX-t.clientX,y=q.clientY-t.clientY;if(Math.max(Math.abs(x),Math.abs(y))<20)return;Math.abs(x)>Math.abs(y)?f(x>0?1:-1,0):f(0,y>0?1:-1)})}
+function newBtn(el,fn){const b=document.createElement('button');b.className='btn nb';b.textContent='New game';b.onclick=fn;el.append(b)}
+
+/* ---------- Tic Tac Toe ---------- */
+const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+const win=b=>{for(const[a,c,d]of L)if(b[a]&&b[a]==b[c]&&b[a]==b[d])return b[a];return b.includes(0)?0:'T'};
+function mm(b,p){const w=win(b);if(w)return w=='O'?1:w=='X'?-1:0;let r=p=='O'?-2:2;for(let i=0;i<9;i++)if(!b[i]){b[i]=p;const v=mm(b,p=='O'?'X':'O');b[i]=0;r=p=='O'?Math.max(r,v):Math.min(r,v)}return r}
+function ttt(el){let b,over;const info=div('info'),bd=div('b3');el.append(info,bd);
+function draw(m){bd.innerHTML='';b.forEach((v,i)=>{const c=div('cell '+(v||''));c.textContent=v||'';c.onclick=()=>pick(i);bd.append(c)});info.textContent=m||`You are X · Wins ${S.best.ttt||0}`}
+function reset(){b=Array(9).fill(0);over=0;draw()}
+function ai(){const e=b.map((v,i)=>v?-1:i).filter(i=>i>=0);let m;if(Math.random()<.25)m=e[rand(e.length)];else{let s=-9;for(const i of e){b[i]='O';const v=mm(b,'X');b[i]=0;if(v>s){s=v;m=i}}}b[m]='O'}
+function pick(i){if(over||b[i])return;b[i]='X';let r=win(b);if(!r){ai();r=win(b)}if(r){over=1;if(r=='X'){S.best.ttt=(S.best.ttt||0)+1;reward(30,20)}else r=='T'?reward(10,5):reward(3,1);draw(r=='X'?'You win!':r=='O'?'You lose':'Draw')}else draw()}
+newBtn(el,reset);reset()}
+
+/* ---------- Snake ---------- */
+function snake(el){const N=18,c=Math.min(innerWidth-28,420),u=c/N,info=div('info'),cv=document.createElement('canvas');cv.width=cv.height=c;el.append(info,cv);const x=cv.getContext('2d');let s,d,nd,f,sc,tm,alive;
+const set=(a,b)=>{if(a+d[0]||b+d[1])nd=[a,b]};swipe(cv,set);
+const go=()=>{if(!alive)return;tick();tm=setTimeout(go,Math.max(70,150-sc*4))};
+function food(){do f=[rand(N),rand(N)];while(s.some(p=>p[0]==f[0]&&p[1]==f[1]))}
+function reset(){clearTimeout(tm);s=[[9,9],[8,9],[7,9]];d=nd=[1,0];sc=0;alive=1;food();info.textContent='Swipe to steer';draw();tm=setTimeout(go,400)}
+function tick(){d=nd;const h=[s[0][0]+d[0],s[0][1]+d[1]];if(h[0]<0||h[1]<0||h[0]>=N||h[1]>=N||s.some(p=>p[0]==h[0]&&p[1]==h[1]))return die();s.unshift(h);if(h[0]==f[0]&&h[1]==f[1]){sc++;food()}else s.pop();info.textContent='Score '+sc+' · Best '+Math.max(sc,S.best.snake||0);draw()}
+function die(){alive=0;best('snake',sc);if(sc)reward(sc*4,sc*2);info.textContent='Game over · Score '+sc}
+function draw(){x.fillStyle='#10162e';x.fillRect(0,0,c,c);x.fillStyle='#ff4d6d';x.beginPath();x.arc((f[0]+.5)*u,(f[1]+.5)*u,u*.38,0,7);x.fill();s.forEach((p,i)=>{x.fillStyle=i?'#00e0c6':'#fff';x.fillRect(p[0]*u+1,p[1]*u+1,u-2,u-2)})}
+newBtn(el,reset);reset();return()=>{alive=0;clearTimeout(tm)}}
+
+/* ---------- 2048 ---------- */
+function g2048(el){let g,sc;const info=div('info'),bd=div('b4');el.append(info,bd);swipe(bd,(a,b)=>move(a?(a<0?0:1):(b<0?2:3)));
+function add(){const e=[];g.forEach((v,i)=>v||e.push(i));if(e.length)g[e[rand(e.length)]]=Math.random()<.9?2:4}
+function slide(row){const r=row.filter(v=>v);let m=0;for(let i=0;i<r.length-1;i++)if(r[i]==r[i+1]){r[i]*=2;m+=r[i];r.splice(i+1,1)}while(r.length<4)r.push(0);return[r,m]}
+function move(dir){let ch=0;for(let i=0;i<4;i++){const idx=[0,1,2,3].map(j=>dir<2?i*4+j:j*4+i);if(dir%2)idx.reverse();const[r,m]=slide(idx.map(k=>g[k]));idx.forEach((k,j)=>{if(g[k]!=r[j])ch=1;g[k]=r[j]});sc+=m}if(ch){add();draw()}}
+const dead=()=>!g.includes(0)&&![0,1,2,3].some(i=>[0,1,2,3].some(j=>{const k=i*4+j;return(j<3&&g[k]==g[k+1])||(i<3&&g[k]==g[k+4])}));
+function draw(){bd.innerHTML='';g.forEach(v=>{const c=div('t');c.textContent=v||'';if(v)c.style.background=`hsl(${260-Math.log2(v)*22},70%,${Math.min(62,30+Math.log2(v)*4)}%)`;bd.append(c)});info.textContent='Score '+sc+' · Best '+Math.max(sc,S.best.g2048||0);if(dead()){best('g2048',sc);if(sc)reward(sc/8,sc/20+1);info.textContent+=' · Game over'}}
+function reset(){g=Array(16).fill(0);sc=0;add();add();draw()}
+newBtn(el,reset);reset()}
+
+/* ---------- Tap Empire (idle + upgrades) ---------- */
+function empire(el){const E=S.emp,cost=i=>Math.floor([10,25,200][i]*[1.5,1.6,1.7][i]**E.u[i]),rate=()=>E.u[1]+E.u[2]*8;
+if(E.at){const gain=Math.floor(Math.min((Date.now()-E.at)/1e3,28800)*rate());if(gain>0){E.c+=gain;toast('Welcome back! Your empire earned '+gain+' 💎')}}
+E.at=Date.now();
+const info=div('info'),big=document.createElement('button'),list=div('');big.className='tap';big.textContent='💎';el.append(info,big,list);
+const names=[['⛏️ Tap Power','+1 per tap'],['🤖 Auto Miner','+1 per second'],['🏭 Factory','+8 per second']];
+const bs=names.map((n,i)=>{const b=document.createElement('button');b.className='up';b.onclick=()=>{if(E.c>=cost(i)){E.c-=cost(i);E.u[i]++;upd()}};list.append(b);return b});
+const cash=document.createElement('button');cash.className='btn nb';cash.textContent='💰 Cash out for coins & XP';cash.onclick=()=>{if(E.c<100)return toast('Need 100 💎 to cash out');const g=Math.floor(E.c);E.c=0;reward(g/25,g/10);upd()};list.append(cash);
+function upd(){info.textContent=Math.floor(E.c)+' 💎 · '+rate()+' per second · works while you are away';bs.forEach((b,i)=>{b.disabled=E.c<cost(i);b.innerHTML=`<span>${names[i][0]} · Lv ${E.u[i]}<small>${names[i][1]}</small></span><b>${cost(i)} 💎</b>`});S.best.empire=E.u[0]+E.u[1]+E.u[2];save()}
+big.onclick=()=>{E.c+=1+E.u[0];upd()};
+const iv=setInterval(()=>{E.c+=rate();E.at=Date.now();upd()},1000);upd();
+return()=>{clearInterval(iv);E.at=Date.now();save()}}
+
+const GAMES=[
+{id:'ttt',n:'Tic Tac Toe',i:'⭕',d:'Beat the bot',u:' wins',run:ttt},
+{id:'snake',n:'Snake',i:'🐍',d:'Eat, grow, speed up',u:'',run:snake},
+{id:'g2048',n:'2048',i:'🔢',d:'Merge to the top',u:'',run:g2048},
+{id:'empire',n:'Tap Empire',i:'💎',d:'Upgrade and earn offline',u:' upgrades',run:empire}];
+
+/* ---------- Hub ---------- */
+let cleanup=null;
+function home(){if(cleanup){cleanup();cleanup=null}const l=lvl(),a=40*(l-1)**2,b=40*l*l,p=Math.max(0,(S.xp-a)/(b-a)*100);
+$('#app').innerHTML=`<div class="top"><div><h1>NEXORA</h1><small>Level ${l} · ${S.xp} XP</small></div><div class="coin">🪙 ${S.coins}</div></div><div class="bar"><i style="width:${p}%"></i></div>
+<div class="row"><button class="btn" onclick="daily()">🎁 Daily reward</button><button class="btn alt" onclick="shop()">🛒 Boosts</button></div>
+<div class="grid">${GAMES.map(g=>`<div class="card" onclick="play('${g.id}')"><b>${g.i}</b><h3>${g.n}</h3><p>${g.d}</p><small>${g.id in S.best?'Best '+S.best[g.id]+g.u:'Play now'}</small></div>`).join('')}<div class="card dim"><b>🔜</b><h3>More games</h3><p>New ones arrive with every update</p></div></div>`}
+function play(id){const g=GAMES.find(x=>x.id==id);history.pushState({},'');$('#app').innerHTML=`<div class="top"><button class="btn alt" onclick="history.back()">←</button><h2>${g.n}</h2><div class="coin">Lv ${lvl()}</div></div><div id="g"></div>`;cleanup=g.run($('#g'))||null}
+function daily(){const d=Math.floor(Date.now()/864e5);if(S.daily==d)return toast('Come back tomorrow for the next reward');S.streak=S.daily==d-1?S.streak+1:1;S.daily=d;const c=50*Math.min(S.streak,7);S.coins+=c;S.xp+=20;save();toast(`Day ${S.streak} streak! +${c} 🪙 +20 XP`);home()}
+function shop(){const m=div('modal'),c=n=>100*(n+1)**2;m.innerHTML=`<div class="sheet"><h2 style="margin-bottom:12px">Boosts</h2>${[['xp','⚡ XP Boost'],['coin','🪙 Coin Boost']].map(([k,n])=>`<button class="up" ${S.up[k]>=10||S.coins<c(S.up[k])?'disabled':''} onclick="buy('${k}')"><span>${n} · Lv ${S.up[k]}<small>+10% per level, applies to every game</small></span><b>${S.up[k]>=10?'MAX':c(S.up[k])+' 🪙'}</b></button>`).join('')}<button class="btn nb" onclick="this.closest('.modal').remove()">Close</button></div>`;document.body.append(m)}
+function buy(k){const c=100*(S.up[k]+1)**2;if(S.coins<c||S.up[k]>=10)return;S.coins-=c;S.up[k]++;save();$('.modal').remove();home();shop()}
+window.onpopstate=home;
+home();
+</script></body></html>
