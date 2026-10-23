@@ -18,6 +18,8 @@ jobs:
         run: pip install pillow && python make_icon.py
       - name: Install
         run: npm install
+      - name: Bundle three.js
+        run: cp node_modules/three/build/three.min.js www/three.min.js
       - name: Add Android
         run: npx cap add android
       - name: Generate icons
