@@ -1,10 +1,11 @@
 {
   "name": "nexora",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "dependencies": {
     "@capacitor/android": "^6.1.2",
-    "@capacitor/core": "^6.1.2"
+    "@capacitor/core": "^6.1.2",
+    "three": "0.149.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
