@@ -40,6 +40,7 @@ canvas{display:block;margin:auto;border-radius:16px;touch-action:none}
 .sheet{background:#10162e;width:100%;padding:20px;border-radius:24px 24px 0 0}
 </style></head>
 <body><div id="app"></div>
+<script src="games2.js"></script>
 <script>
 const $=s=>document.querySelector(s),rand=n=>Math.random()*n|0;
 const div=c=>{const d=document.createElement('div');d.className=c;return d};
@@ -104,6 +105,7 @@ const GAMES=[
 {id:'snake',n:'Snake',i:'🐍',d:'Eat, grow, speed up',u:'',run:snake},
 {id:'g2048',n:'2048',i:'🔢',d:'Merge to the top',u:'',run:g2048},
 {id:'empire',n:'Tap Empire',i:'💎',d:'Upgrade and earn offline',u:' upgrades',run:empire}];
+GAMES.push(...(window.MORE||[]));
 
 /* ---------- Hub ---------- */
 let cleanup=null;
