@@ -38,6 +38,22 @@ canvas{display:block;margin:auto;border-radius:16px;touch-action:none}
 .toast{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%);background:var(--a);color:#032;padding:10px 16px;border-radius:20px;font-weight:700;z-index:9;white-space:nowrap}
 .modal{position:fixed;inset:0;background:#000a;display:flex;align-items:flex-end;z-index:5}
 .sheet{background:#10162e;width:100%;padding:20px;border-radius:24px 24px 0 0}
+.btn,.up,.card{transition:transform .12s}
+.btn:active,.up:not(:disabled):active{transform:scale(.96)}
+.bar i{transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.card{animation:pop .5s cubic-bezier(.2,.9,.3,1.15) backwards;animation-delay:calc(min(var(--i,0),12)*35ms)}
+.tap{animation:float 3s ease-in-out infinite}.tap:active{animation:none;transform:scale(.94)}
+.toast{animation:tin .3s ease-out,tout .3s 2.1s forwards}
+.modal{animation:fade .2s}.sheet{animation:sup .3s cubic-bezier(.2,.9,.3,1)}
+#app.in{animation:slide .28s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.94)}}
+@keyframes float{50%{transform:translateY(-8px)}}
+@keyframes tin{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes tout{to{opacity:0;transform:translate(-50%,-10px)}}
+@keyframes fade{from{opacity:0}}
+@keyframes sup{from{transform:translateY(100%)}}
+@keyframes slide{from{opacity:0;transform:translateX(24px)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head>
 <body><div id="app"></div>
 <script src="three.min.js"></script>
@@ -45,6 +61,7 @@ canvas{display:block;margin:auto;border-radius:16px;touch-action:none}
 <script src="games3.js"></script>
 <script src="games4.js"></script>
 <script src="games5.js"></script>
+<script src="games6.js"></script>
 <script>
 const $=s=>document.querySelector(s),rand=n=>Math.random()*n|0;
 const div=c=>{const d=document.createElement('div');d.className=c;return d};
@@ -114,13 +131,14 @@ GAMES.push(...(window.MORE||[]));
 /* ---------- Hub ---------- */
 let cleanup=null;
 function home(){if(cleanup){cleanup();cleanup=null}const l=lvl(),a=40*(l-1)**2,b=40*l*l,p=Math.max(0,(S.xp-a)/(b-a)*100);
-$('#app').innerHTML=`<div class="top"><div><h1>NEXORA</h1><small>Level ${l} · ${S.xp} XP</small></div><div class="coin">🪙 ${S.coins}</div></div><div class="bar"><i style="width:${p}%"></i></div>
+$('#app').innerHTML=`<div class="top"><div><h1>NEXORA</h1><small>Level ${l} · ${S.xp} XP</small></div><div class="coin">🪙 ${S.coins}</div></div><div class="bar"><i id="xp" style="width:0"></i></div>
 <div class="row"><button class="btn" onclick="daily()">🎁 Daily reward</button><button class="btn alt" onclick="shop()">🛒 Boosts</button></div>
-<div class="grid">${GAMES.map(g=>`<div class="card" onclick="play('${g.id}')"><b>${g.i}</b><h3>${g.n}</h3><p>${g.d}</p><small>${g.id in S.best?'Best '+S.best[g.id]+g.u:'Play now'}</small></div>`).join('')}<div class="card dim"><b>🔜</b><h3>More games</h3><p>New ones arrive with every update</p></div></div>`}
-function play(id){const g=GAMES.find(x=>x.id==id);history.pushState({},'');$('#app').innerHTML=`<div class="top"><button class="btn alt" onclick="history.back()">←</button><h2>${g.n}</h2><div class="coin">Lv ${lvl()}</div></div><div id="g"></div>`;cleanup=g.run($('#g'))||null}
+<div class="grid">${GAMES.map((g,i)=>`<div class="card" style="--i:${i}" onclick="play('${g.id}')"><b>${g.i}</b><h3>${g.n}</h3><p>${g.d}</p><small>${g.id in S.best?'Best '+S.best[g.id]+g.u:'Play now'}</small></div>`).join('')}</div>`;requestAnimationFrame(()=>requestAnimationFrame(()=>{const i=$('#xp');if(i)i.style.width=p+'%'}))}
+function play(id){const g=GAMES.find(x=>x.id==id);history.pushState({},'');$('#app').innerHTML=`<div class="top"><button class="btn alt" onclick="history.back()">←</button><h2>${g.n}</h2><div class="coin">Lv ${lvl()}</div></div><div id="g"></div>`;anim();cleanup=g.run($('#g'))||null}
 function daily(){const d=Math.floor(Date.now()/864e5);if(S.daily==d)return toast('Come back tomorrow for the next reward');S.streak=S.daily==d-1?S.streak+1:1;S.daily=d;const c=50*Math.min(S.streak,7);S.coins+=c;S.xp+=20;save();toast(`Day ${S.streak} streak! +${c} 🪙 +20 XP`);home()}
 function shop(){const m=div('modal'),c=n=>100*(n+1)**2;m.innerHTML=`<div class="sheet"><h2 style="margin-bottom:12px">Boosts</h2>${[['xp','⚡ XP Boost'],['coin','🪙 Coin Boost']].map(([k,n])=>`<button class="up" ${S.up[k]>=10||S.coins<c(S.up[k])?'disabled':''} onclick="buy('${k}')"><span>${n} · Lv ${S.up[k]}<small>+10% per level, applies to every game</small></span><b>${S.up[k]>=10?'MAX':c(S.up[k])+' 🪙'}</b></button>`).join('')}<button class="btn nb" onclick="this.closest('.modal').remove()">Close</button></div>`;document.body.append(m)}
 function buy(k){const c=100*(S.up[k]+1)**2;if(S.coins<c||S.up[k]>=10)return;S.coins-=c;S.up[k]++;save();$('.modal').remove();home();shop()}
+function anim(){const a=$('#app');a.classList.remove('in');void a.offsetWidth;a.classList.add('in')}
 window.onpopstate=home;
 home();
 </script></body></html>
